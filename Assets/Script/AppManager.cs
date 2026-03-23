@@ -1,23 +1,23 @@
-// AppManager
 using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 
 public class AppManager : MonoBehaviour
 {
+    private const string ApiUrl = "https://sid-restapi.onrender.com";
+
     private string Token;
     private string Username;
 
-    private const string ApiUrl = "https://sid-restapi.onrender.com";
+    [Header("Referencias Externas")]
+    [SerializeField] private Puntuacion puntuacionScript;
 
     [Header("Panel Login")]
     [SerializeField] private GameObject panelLogin;
     [SerializeField] private TMP_InputField loginUsernameInput;
     [SerializeField] private TMP_InputField loginPasswordInput;
     [SerializeField] private TMP_Text loginErrorText;
-    
 
     [Header("Panel Register")]
     [SerializeField] private GameObject panelRegister;
@@ -29,12 +29,8 @@ public class AppManager : MonoBehaviour
     [SerializeField] private GameObject panelMain;
     [SerializeField] private TMP_Text welcomeLabel;
 
-    [SerializeField] private Puntuacion puntuacion;  // Asigna en Inspector
-
     private void Start()
     {
-        // Se eliminó el bloque que apagaba todos los paneles al inicio.
-        
         SetError(loginErrorText, "");
         SetError(registerErrorText, "");
 
@@ -44,12 +40,10 @@ public class AppManager : MonoBehaviour
         if (!string.IsNullOrEmpty(Token) && !string.IsNullOrEmpty(Username))
         {
             StartCoroutine(VerifyToken());
+            return;
         }
-        else
-        {
-            // Si no hay sesión, mostramos el login por defecto
-            ShowPanel(panelLogin);
-        }
+
+        ShowPanel(panelLogin);
     }
 
     private IEnumerator VerifyToken()
@@ -61,17 +55,12 @@ public class AppManager : MonoBehaviour
 
         if (www.result == UnityWebRequest.Result.Success)
         {
-            Debug.Log("Sesión restaurada: " + Username);
-            // ✅ SINCRONIZACIÓN: Carga el usuario guardado
-            if (puntuacion != null)
-            {
-            puntuacion.InicializarConUsuario(Username);
-            }
+            Debug.Log("Sesion restaurada: " + Username);
             EnterGame();
         }
         else
         {
-            Debug.LogWarning("Token inválido, redirigiendo al login.");
+            Debug.LogWarning("Token invalido, redirigiendo al login.");
             ClearSession();
             ShowPanel(panelLogin);
         }
@@ -80,6 +69,7 @@ public class AppManager : MonoBehaviour
     public void RegisterButtonHandler()
     {
         SetError(registerErrorText, "");
+
         string user = registerUsernameInput.text.Trim();
         string pass = registerPasswordInput.text;
 
@@ -105,7 +95,7 @@ public class AppManager : MonoBehaviour
         {
             loginUsernameInput.text = username;
             loginPasswordInput.text = password;
-            SetError(loginErrorText, "✔ Cuenta creada. Inicia sesión.");
+            SetError(loginErrorText, "Cuenta creada. Inicia sesion.");
             GoToLoginButtonHandler();
         }
         else
@@ -118,12 +108,13 @@ public class AppManager : MonoBehaviour
     public void LoginButtonHandler()
     {
         SetError(loginErrorText, "");
+
         string user = loginUsernameInput.text.Trim();
         string pass = loginPasswordInput.text;
 
         if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass))
         {
-            SetError(loginErrorText, "Ingresa usuario y contraseña.");
+            SetError(loginErrorText, "Ingresa usuario y contrasena.");
             return;
         }
 
@@ -133,48 +124,48 @@ public class AppManager : MonoBehaviour
     private IEnumerator LoginCoroutine(string username, string password)
     {
         AuthData authData = new AuthData { username = username, password = password };
-    string json = JsonUtility.ToJson(authData);
+        string json = JsonUtility.ToJson(authData);
 
-    UnityWebRequest www = UnityWebRequest.Post(ApiUrl + "/api/auth/login", json, "application/json");
+        UnityWebRequest www = UnityWebRequest.Post(ApiUrl + "/api/auth/login", json, "application/json");
 
-    yield return www.SendWebRequest();
+        yield return www.SendWebRequest();
 
-    if (www.result == UnityWebRequest.Result.Success)
-    {
-        AuthResponse response = JsonUtility.FromJson<AuthResponse>(www.downloadHandler.text);
-        Token = response.token;
-        Username = response.usuario.username;
-
-        PlayerPrefs.SetString("Token", Token);
-        PlayerPrefs.SetString("Username", Username);
-        PlayerPrefs.Save();
-
-        // ✅ SINCRONIZACIÓN: Carga el usuario en Puntuacion
-        if (puntuacion != null)
+        if (www.result == UnityWebRequest.Result.Success)
         {
-            puntuacion.InicializarConUsuario(Username);
-        }
+            AuthResponse response = JsonUtility.FromJson<AuthResponse>(www.downloadHandler.text);
+            Token = response.token;
+            Username = response.usuario.username;
 
-        EnterGame();
-    }
-    else
-    {
-        ErrorResponse err = TryParseError(www.downloadHandler.text);
-        SetError(loginErrorText, err != null ? err.msg : "Usuario o contraseña incorrectos.");
-    }
+            PlayerPrefs.SetString("Token", Token);
+            PlayerPrefs.SetString("Username", Username);
+            PlayerPrefs.Save();
+
+            EnterGame();
+        }
+        else
+        {
+            ErrorResponse err = TryParseError(www.downloadHandler.text);
+            SetError(loginErrorText, err != null ? err.msg : "Usuario o contrasena incorrectos.");
+        }
     }
 
     public void LogoutButtonHandler()
     {
         ClearSession();
-        if (welcomeLabel != null) welcomeLabel.text = "";
-        ShowPanel(panelLogin); // Redirige al login tras cerrar sesión
+
+        if (welcomeLabel != null)
+        {
+            welcomeLabel.text = "";
+        }
+
+        ShowPanel(panelLogin);
     }
 
     private void ClearSession()
     {
         Token = "";
         Username = "";
+
         PlayerPrefs.DeleteKey("Token");
         PlayerPrefs.DeleteKey("Username");
         PlayerPrefs.Save();
@@ -194,35 +185,51 @@ public class AppManager : MonoBehaviour
 
     private void ShowPanel(GameObject target)
     {
-        // El método ShowPanel ahora solo apaga los paneles activos del flujo de auth
         panelLogin.SetActive(false);
         panelRegister.SetActive(false);
         panelMain.SetActive(false);
 
-        if (target != null) target.SetActive(true);
+        if (target != null)
+        {
+            target.SetActive(true);
+        }
     }
 
     private void EnterGame()
     {
         if (welcomeLabel != null)
+        {
             welcomeLabel.text = "Bienvenido, " + Username;
+        }
+
+        // Si el script de puntuación existe, le decimos qué usuario entró
+        if (puntuacionScript != null)
+        {
+            puntuacionScript.InicializarConUsuario(Username);
+        }
 
         ShowPanel(panelMain);
     }
 
     private void SetError(TMP_Text label, string message)
     {
-        if (label != null) label.text = message;
+        if (label != null)
+        {
+            label.text = message;
+        }
     }
 
     private ErrorResponse TryParseError(string json)
     {
-        try { return JsonUtility.FromJson<ErrorResponse>(json); }
-        catch { return null; }
+        try
+        {
+            return JsonUtility.FromJson<ErrorResponse>(json);
+        }
+        catch
+        {
+            return null;
+        }
     }
-
-    
-
     
 }
 
