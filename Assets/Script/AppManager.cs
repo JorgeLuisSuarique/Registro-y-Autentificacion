@@ -17,6 +17,7 @@ public class AppManager : MonoBehaviour
     [SerializeField] private TMP_InputField loginUsernameInput;
     [SerializeField] private TMP_InputField loginPasswordInput;
     [SerializeField] private TMP_Text loginErrorText;
+    
 
     [Header("Panel Register")]
     [SerializeField] private GameObject panelRegister;
@@ -27,6 +28,8 @@ public class AppManager : MonoBehaviour
     [Header("Panel Main")]
     [SerializeField] private GameObject panelMain;
     [SerializeField] private TMP_Text welcomeLabel;
+
+    [SerializeField] private Puntuacion puntuacion;  // Asigna en Inspector
 
     private void Start()
     {
@@ -59,6 +62,11 @@ public class AppManager : MonoBehaviour
         if (www.result == UnityWebRequest.Result.Success)
         {
             Debug.Log("Sesión restaurada: " + Username);
+            // ✅ SINCRONIZACIÓN: Carga el usuario guardado
+            if (puntuacion != null)
+            {
+            puntuacion.InicializarConUsuario(Username);
+            }
             EnterGame();
         }
         else
@@ -125,29 +133,35 @@ public class AppManager : MonoBehaviour
     private IEnumerator LoginCoroutine(string username, string password)
     {
         AuthData authData = new AuthData { username = username, password = password };
-        string json = JsonUtility.ToJson(authData);
+    string json = JsonUtility.ToJson(authData);
 
-        UnityWebRequest www = UnityWebRequest.Post(ApiUrl + "/api/auth/login", json, "application/json");
+    UnityWebRequest www = UnityWebRequest.Post(ApiUrl + "/api/auth/login", json, "application/json");
 
-        yield return www.SendWebRequest();
+    yield return www.SendWebRequest();
 
-        if (www.result == UnityWebRequest.Result.Success)
+    if (www.result == UnityWebRequest.Result.Success)
+    {
+        AuthResponse response = JsonUtility.FromJson<AuthResponse>(www.downloadHandler.text);
+        Token = response.token;
+        Username = response.usuario.username;
+
+        PlayerPrefs.SetString("Token", Token);
+        PlayerPrefs.SetString("Username", Username);
+        PlayerPrefs.Save();
+
+        // ✅ SINCRONIZACIÓN: Carga el usuario en Puntuacion
+        if (puntuacion != null)
         {
-            AuthResponse response = JsonUtility.FromJson<AuthResponse>(www.downloadHandler.text);
-            Token = response.token;
-            Username = response.usuario.username;
-
-            PlayerPrefs.SetString("Token", Token);
-            PlayerPrefs.SetString("Username", Username);
-            PlayerPrefs.Save();
-
-            EnterGame();
+            puntuacion.InicializarConUsuario(Username);
         }
-        else
-        {
-            ErrorResponse err = TryParseError(www.downloadHandler.text);
-            SetError(loginErrorText, err != null ? err.msg : "Usuario o contraseña incorrectos.");
-        }
+
+        EnterGame();
+    }
+    else
+    {
+        ErrorResponse err = TryParseError(www.downloadHandler.text);
+        SetError(loginErrorText, err != null ? err.msg : "Usuario o contraseña incorrectos.");
+    }
     }
 
     public void LogoutButtonHandler()
@@ -206,6 +220,10 @@ public class AppManager : MonoBehaviour
         try { return JsonUtility.FromJson<ErrorResponse>(json); }
         catch { return null; }
     }
+
+    
+
+    
 }
 
 [System.Serializable] public class AuthData { public string username; public string password; }
