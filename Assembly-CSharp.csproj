@@ -49,6 +49,7 @@
     <Analyzer Include="E:\UnityProyec\6000.0.65f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Script\ListaPuntuacion.cs" />
     <Compile Include="Assets\Script\Puntuacion.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\Script\AppManager.cs" />
